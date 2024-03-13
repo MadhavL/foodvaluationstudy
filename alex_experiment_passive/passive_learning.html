@@ -60,6 +60,7 @@
     const outcome_images = ['<p style="font-size:200px;color:red">—</p>', '<p style="font-size:200px;color:green">+</p>'] //Negative is idx 0, +ve is idx 1
 
     function generate_aligned(trial_images, outcome_images, trials_per_block, probability, ITI, image_directory) {
+        console.log("FIRED2_A")
         var trial_stimuli_aligned = [];
         let baseline = Array(trials_per_block).fill([0, 1, 2, 3]).flat()
         let extra_images = Math.floor(Math.random() * 5)
@@ -74,8 +75,8 @@
                     trial_stimuli_aligned.push({
                         image: trial_images[idx], 
                         image_name: image_name_from_path(trial_images[idx], image_directory),
-                        outcome_image: outcome_images[(rand_outcome < probability ? 0 : 1)],
-                        jitter_1: (Math.random() * ITI[1]) + ITI[0],
+                        // outcome_image: outcome_images[(rand_outcome < probability ? 0 : 1)],
+                        // jitter_1: (Math.random() * ITI[1]) + ITI[0],
                         jitter_2: (Math.random() * ITI[3]) + ITI[2],
                         image_rating: idx, //0 = S.D., 1 = D, 2 = L, 3 = S.L
                         trial_type: 0, //0 = ALIGNED, 1 = UNALIGNED
@@ -87,8 +88,8 @@
                     trial_stimuli_aligned.push({
                         image: trial_images[idx], 
                         image_name: image_name_from_path(trial_images[idx], image_directory),
-                        outcome_image: outcome_images[(rand_outcome >= probability ? 0 : 1)],
-                        jitter_1: (Math.random() * ITI[1]) + ITI[0],
+                        // outcome_image: outcome_images[(rand_outcome >= probability ? 0 : 1)],
+                        // jitter_1: (Math.random() * ITI[1]) + ITI[0],
                         jitter_2: (Math.random() * ITI[3]) + ITI[2],
                         image_rating: idx, //0 = S.D., 1 = D, 2 = L, 3 = S.L
                         trial_type: 0, //0 = ALIGNED, 1 = UNALIGNED
@@ -97,11 +98,12 @@
                     })
                 }
             }
-        
+        console.log("FIRED3_A")
         return trial_stimuli_aligned
     }
 
     function generate_unaligned(trial_images, outcome_images, trials_per_block, probability, ITI, image_directory) {
+        console.log("FIRED2")
         var trial_stimuli_unaligned = [];
         let baseline = Array(trials_per_block).fill([0, 1, 2, 3]).flat()
         let extra_images = Math.floor(Math.random() * 5)
@@ -117,8 +119,8 @@
                 trial_stimuli_unaligned.push({
                     image: trial_images[idx], 
                     image_name: image_name_from_path(trial_images[idx], image_directory),
-                    outcome_image: outcome_images[(rand_outcome < probability ? 1 : 0)],
-                    jitter_1: (Math.random() * ITI[1]) + ITI[0],
+                    // outcome_image: outcome_images[(rand_outcome < probability ? 1 : 0)],
+                    // jitter_1: (Math.random() * ITI[1]) + ITI[0],
                     jitter_2: (Math.random() * ITI[3]) + ITI[2],
                     image_rating: idx, //0 = S.D., 1 = D, 2 = L, 3 = S.L
                     trial_type: 1, //0 = ALIGNED, 1 = UNALIGNED
@@ -130,8 +132,8 @@
                 trial_stimuli_unaligned.push({
                     image: trial_images[idx], 
                     image_name: image_name_from_path(trial_images[idx], image_directory),
-                    outcome_image: outcome_images[(rand_outcome >= probability ? 1 : 0)],
-                    jitter_1: (Math.random() * ITI[1]) + ITI[0],
+                    // outcome_image: outcome_images[(rand_outcome >= probability ? 1 : 0)],
+                    // jitter_1: (Math.random() * ITI[1]) + ITI[0],
                     jitter_2: (Math.random() * ITI[3]) + ITI[2],
                     image_rating: idx, //0 = S.D., 1 = D, 2 = L, 3 = S.L
                     trial_type: 1, //0 = ALIGNED, 1 = UNALIGNED
@@ -140,7 +142,7 @@
                 })
             }
         }
-        
+        console.log("FIRED3")
         return trial_stimuli_unaligned
     }
 
@@ -162,6 +164,7 @@
         /* Get parameters from JSON */
         const initial_ITI = jatos.componentJsonInput['initial_ITI']
         const image_duration = jatos.componentJsonInput['image_duration']
+        const choice_duration = jatos.componentJsonInput['choice_duration']
         const ITI_1_start = jatos.componentJsonInput['ITI_1'][0]
         const ITI_1_range = jatos.componentJsonInput['ITI_1'][1] - jatos.componentJsonInput['ITI_1'][0]
         const outcome_duration = jatos.componentJsonInput['outcome_duration']
@@ -170,7 +173,8 @@
         const probability = jatos.componentJsonInput['probability']
         const num_blocks = jatos.componentJsonInput['num_blocks']
         const trials_per_block = jatos.componentJsonInput['trials_per_block']
-        const block_order = jatos.componentJsonInput['block_order']
+        const block_order_assignment = Math.floor(Math.random() * 2)
+        const block_order = jatos.componentJsonInput['block_order'][block_order_assignment]
         if (block_order.length != num_blocks) {
             throw new Error("Number of blocks doesn't match block order array!");
         }
@@ -202,9 +206,9 @@
 
         /* Assemble the timeline variables with stimuli and the outcome for Practice Trial */
         /* Each trial image 4 times with probabilistic outcome based on aligned/unaligned */
+        console.log("FIRED1")
         trial_stimuli = generate_stimuli(trial_images, outcome_images, num_blocks, trials_per_block, probability, 
         [ITI_1_start, ITI_1_range, ITI_2_start, ITI_2_range], block_order, image_directory)
-
         /* define test procedure */
         var trial_image = {
             type: jsPsychImageKeyboardResponse,
@@ -213,21 +217,24 @@
             stimulus_height: window.innerHeight * 0.4,
             trial_duration: image_duration
         };
+        console.log("FIRED3")
 
         var trial_choice = {
             type: jsPsychHtmlKeyboardResponse,
             choices: ['ArrowLeft', 'ArrowRight'],
             stimulus: '<p style="font-size: 36px">Which outcome do you expect?</p><p style="font-size: 128px"><span style="color:red">-&nbsp&nbsp&nbsp&nbsp</span><span style="color:green">+</span></p>',
             // stimulus_height: window.innerHeight * 0.35,
+            trial_duration: choice_duration,
             data: {
                 filter_data: true,
-                jitter_1: jsPsych.timelineVariable('jitter_1'),
+                // jitter_1: jsPsych.timelineVariable('jitter_1'),
                 jitter_2: jsPsych.timelineVariable('jitter_2'),
                 image: jsPsych.timelineVariable('image_name'),
                 image_rating: jsPsych.timelineVariable('image_rating'),
                 outcome: jsPsych.timelineVariable('outcome'),
                 trial_block: jsPsych.timelineVariable('trial_type'),
-                probabilistic_event: jsPsych.timelineVariable('probabilistic_event')
+                probabilistic_event: jsPsych.timelineVariable('probabilistic_event'),
+                // outcome_image: jsPsych.timelineVariable('outcome_image')
             },
             save_trial_parameters: {
                 stimulus: false,
@@ -235,11 +242,29 @@
                 time_elapsed: false,
             },
             on_finish: function(data) {
+                let rand_time = (Math.random() * ITI_1_range) + ITI_1_start
                 if (data.response == 'arrowleft') {
                     data.response = 0
+                    jatos.studySessionData['prev_success'] = true
+                    let jitter = (choice_duration - data.rt)/2 + rand_time
+                    jatos.studySessionData['jitter_1'] = jitter
+                    data.jitter_1 = jitter
+                    jatos.studySessionData['outcome'] = data.outcome_image
+                }
+                else if (data.response == 'arrowright'){
+                    data.response = 1
+                    jatos.studySessionData['prev_success'] = true
+                    let jitter = (choice_duration - data.rt)/2 + rand_time
+                    jatos.studySessionData['jitter_1'] = jitter
+                    data.jitter_1 = jitter
+                    jatos.studySessionData['outcome'] = data.outcome_image
                 }
                 else {
-                    data.response = 1
+                    data.response = null
+                    jatos.studySessionData['prev_success'] = false
+                    jatos.studySessionData['jitter_1'] = rand_time
+                    data.jitter_1 = rand_time
+                    jatos.studySessionData['outcome'] = '<p style="font-size:160px;color:white">Too slow!</p>'
                 }
                 data.correct = (data.response == data.outcome)
                 if (data.probabilistic_event) {
@@ -250,20 +275,28 @@
                 }
             }
         }
+        console.log("FIRED4")
 
         var fixation2 = {
             type: jsPsychHtmlKeyboardResponse,
             stimulus: '<div style="font-size:60px;">●</div>',
             choices: "NO_KEYS",
-            trial_duration: jsPsych.timelineVariable('jitter_1'),
+            trial_duration: 2000,
+            trial_duration: function() {
+                return jatos.studySessionData['jitter_1']
+            },
         };
+        console.log("FIRED5")
 
         var trial_outcome = {
             type: jsPsychHtmlKeyboardResponse,
             choices: "NO_KEYS",
-            stimulus: jsPsych.timelineVariable('outcome_image'),
+            stimulus: function() {
+                return jatos.studySessionData['outcome_image']
+            },
             trial_duration: outcome_duration,
         };
+        console.log("FIRED6")
 
         var fixation3 = {
             type: jsPsychHtmlKeyboardResponse,
@@ -271,6 +304,7 @@
             choices: "NO_KEYS",
             trial_duration: jsPsych.timelineVariable('jitter_2'),
         };
+        console.log("FIRED7")
 
         /* define test procedure */
         var trial = {
@@ -278,7 +312,8 @@
             timeline_variables: trial_stimuli,
             randomize_order: false,
         };
-        timeline.push(trial);
+        // timeline.push(trial);
+        console.log("FIRED8")
 
         jsPsych.run(timeline);
     });
