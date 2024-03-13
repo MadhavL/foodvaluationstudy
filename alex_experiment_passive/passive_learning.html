@@ -170,8 +170,7 @@
         const probability = jatos.componentJsonInput['probability']
         const num_blocks = jatos.componentJsonInput['num_blocks']
         const trials_per_block = jatos.componentJsonInput['trials_per_block']
-        const block_order_assignment = Math.floor(Math.random() * 2)
-        const block_order = jatos.componentJsonInput['block_order'][block_order_assignment]
+        const block_order = jatos.componentJsonInput['block_order']
         if (block_order.length != num_blocks) {
             throw new Error("Number of blocks doesn't match block order array!");
         }
