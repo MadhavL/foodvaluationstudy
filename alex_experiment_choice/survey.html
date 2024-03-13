@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Experiment</title>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+    <meta content="utf-8" http-equiv="encoding" />
+
+    <!-- JSPSYCH & PLUGINS -->
+    <script src="jatos.js"></script>
+    <script src="static/js/jspsych/jspsych.js"></script>
+    <script src="static/js/jspsych/plugin-survey.js"></script>
+    <!-- <link
+      href="static/js/jspsych/jspsych.css"
+      rel="stylesheet"
+      type="text/css"
+    /> -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@jspsych/plugin-survey@0.2.0/css/survey.css"
+    />
+
+    <!-- ----------------------------- Main script ----------------------------- -->
+    <script>
+      // initialize the jsPsych instance
+      var jsPsych = initJsPsych({
+        use_webaudio: false,
+        fullscreen: false,
+        default_iti: 0,
+        on_trial_start: function() {
+            jatos.addAbortButton(
+                {
+                    action: function() {
+                        jatos.endStudyAndRedirect(jatos.endStudyAndRedirect(jatos.studySessionData['abort_url']));
+                    }
+            }
+            );
+        },
+        on_finish: function () {
+            let result_data = {"type": 1, "data": jsPsych.data.get().json()}
+            jatos.startNextComponent(result_data);
+        },
+      });
+
+      // run the instructions for each page provided
+      jatos.onLoad(() => {
+        jsPsych.run([
+          {
+            type: jsPsychSurvey,
+            pages: jatos.componentJsonInput.pages,
+            title: jatos.componentJsonInput.title,
+            show_question_numbers: jatos.componentJsonInput.showQuestionNumbers || "off",
+            save_trial_parameters: {
+                trial_type: false,
+                time_elapsed: false,
+                rt: false,
+                accuracy: false,
+            },
+          }
+        ]);
+      });
+    </script>
+  </head>
+
+  <body>
+  </body>
+</html>

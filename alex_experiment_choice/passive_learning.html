@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My experiment</title>
+    <script src="jatos.js"></script>
+    <script src="static/js/jspsych/jspsych.js"></script>
+    <script src="static/js/jspsych/plugin-instructions.js"></script>
+    <script src="static/js/jspsych/plugin-preload.js"></script>
+    <script src="static/js/jspsych/plugin-image-keyboard-response.js"></script>
+    <script src="static/js/jspsych/plugin-html-keyboard-response.js"></script>
+    <link
+      href="static/js/jspsych/jspsych.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+  </head>
+  <body></body>
+  <script>
+    /* initialize jsPsych */
+    var jsPsych = initJsPsych({
+      on_trial_start: () => {
+        jatos.addAbortButton({style: "color:white; text-shadow:none"})
+      },
+      on_finish: () => {
+        remove_properties = ['trial_type', 'trial_index', 'internal_node_id', 'filter_data']
+        results = jsPsych.data.get().filter({filter_data: true})
+        jatos.startComponentByTitle("Stimuli Rating (POST)", post_process_data(results['trials'], remove_properties)) //TO DO: FILTERING AT END OF TRIAL FOR ACCURACY, PROBABILISTIC EVENT OCCURENCE
+      }
+    });
+
+    //Results should be a list of json objects corresponding to the trial results
+    function post_process_data(results, remove) {
+        for (trial_result of results) {
+            for (property of remove) {
+                delete trial_result[property]
+            }
+        }
+        return results
+    }
+    
+    function image_name_from_path(image_path, base_directory) {
+        return image_path.substring(base_directory.length, image_path.lastIndexOf('.'))
+    }
+
+    /* Take instructions from component JSON input and construct pages for instruction plugin */
+    function parseInstructions({ title, body, next }) {
+        const result = [];
+        if (title) result.push(`<h2>${title}</h2>`)
+        if (body) result.push(body.map((text) => `<p>${text}</p>`).join('\n'));
+        if (next) result.push(`<small style="opacity: 0.5;">${next}</small>`);
+        return result.join('\n');
+      }
+    
+    const outcome_images = ['<p style="font-size:200px;color:red">—</p>', '<p style="font-size:200px;color:green">+</p>'] //Negative is idx 0, +ve is idx 1
+
+    function generate_aligned(trial_images, outcome_images, trials_per_block, probability, ITI, image_directory) {
+        var trial_stimuli_aligned = [];
+        let baseline = Array(trials_per_block).fill([0, 1, 2, 3]).flat()
+        let extra_images = Math.floor(Math.random() * 5)
+        for (let i = 0; i < extra_images; i++) {
+            baseline.push(Math.floor(Math.random() * 4))
+        }
+        const indices = jsPsych.randomization.shuffleNoRepeats(baseline)  
+            for (const idx of indices) {
+                const rand_outcome = Math.random()
+                const probabilistic_event = (rand_outcome < probability ? false : true)
+                if (idx <= 1) { //S.D. or D: 90% -ve, 10% +ve
+                    trial_stimuli_aligned.push({
+                        image: trial_images[idx], 
+                        image_name: image_name_from_path(trial_images[idx], image_directory),
+                        outcome_image: outcome_images[(rand_outcome < probability ? 0 : 1)],
+                        jitter_1: (Math.random() * ITI[1]) + ITI[0],
+                        jitter_2: (Math.random() * ITI[3]) + ITI[2],
+                        image_rating: idx, //0 = S.D., 1 = D, 2 = L, 3 = S.L
+                        trial_type: 0, //0 = ALIGNED, 1 = UNALIGNED
+                        outcome: rand_outcome < probability ? 0 : 1,
+                        probabilistic_event: probabilistic_event
+                    })
+                }
+                else { //S.L or L: 90% +ve, 10% -ve
+                    trial_stimuli_aligned.push({
+                        image: trial_images[idx], 
+                        image_name: image_name_from_path(trial_images[idx], image_directory),
+                        outcome_image: outcome_images[(rand_outcome >= probability ? 0 : 1)],
+                        jitter_1: (Math.random() * ITI[1]) + ITI[0],
+                        jitter_2: (Math.random() * ITI[3]) + ITI[2],
+                        image_rating: idx, //0 = S.D., 1 = D, 2 = L, 3 = S.L
+                        trial_type: 0, //0 = ALIGNED, 1 = UNALIGNED
+                        outcome: rand_outcome >= probability ? 0 : 1,
+                        probabilistic_event: probabilistic_event
+                    })
+                }
+            }
+        
+        return trial_stimuli_aligned
+    }
+
+    function generate_unaligned(trial_images, outcome_images, trials_per_block, probability, ITI, image_directory) {
+        var trial_stimuli_unaligned = [];
+        let baseline = Array(trials_per_block).fill([0, 1, 2, 3]).flat()
+        let extra_images = Math.floor(Math.random() * 5)
+        for (let i = 0; i < extra_images; i++) {
+            baseline.push(Math.floor(Math.random() * 4))
+        }
+        const indices = jsPsych.randomization.shuffleNoRepeats(baseline) 
+        
+        for (const idx of indices) {
+            const rand_outcome = Math.random()
+            const probabilistic_event = (rand_outcome < probability ? false : true)
+            if (idx <= 1) { //S.D. or D: 90% -ve, 10% +ve
+                trial_stimuli_unaligned.push({
+                    image: trial_images[idx], 
+                    image_name: image_name_from_path(trial_images[idx], image_directory),
+                    outcome_image: outcome_images[(rand_outcome < probability ? 1 : 0)],
+                    jitter_1: (Math.random() * ITI[1]) + ITI[0],
+                    jitter_2: (Math.random() * ITI[3]) + ITI[2],
+                    image_rating: idx, //0 = S.D., 1 = D, 2 = L, 3 = S.L
+                    trial_type: 1, //0 = ALIGNED, 1 = UNALIGNED
+                    outcome: rand_outcome < probability ? 1 : 0,
+                    probabilistic_event: probabilistic_event
+                })
+            }
+            else { //S.L or L: 90% +ve, 10% -ve
+                trial_stimuli_unaligned.push({
+                    image: trial_images[idx], 
+                    image_name: image_name_from_path(trial_images[idx], image_directory),
+                    outcome_image: outcome_images[(rand_outcome >= probability ? 1 : 0)],
+                    jitter_1: (Math.random() * ITI[1]) + ITI[0],
+                    jitter_2: (Math.random() * ITI[3]) + ITI[2],
+                    image_rating: idx, //0 = S.D., 1 = D, 2 = L, 3 = S.L
+                    trial_type: 1, //0 = ALIGNED, 1 = UNALIGNED
+                    outcome: rand_outcome >= probability ? 1 : 0,
+                    probabilistic_event: probabilistic_event
+                })
+            }
+        }
+        
+        return trial_stimuli_unaligned
+    }
+
+    function generate_stimuli(trial_images, outcome_images, n, trials_per_block, probability, ITI, block_order, image_directory) {
+        var stimuli = []
+        for (let i = 0; i < n; i++) {
+            if (block_order[i] == 0) {
+                stimuli = stimuli.concat(generate_aligned(trial_images, outcome_images, trials_per_block, probability, ITI, image_directory))
+            }
+            else {
+                stimuli = stimuli.concat(generate_unaligned(trial_images, outcome_images, trials_per_block, probability, ITI, image_directory))
+            }
+        }
+        return stimuli
+    }
+        
+    /* start the experiment */
+    jatos.onLoad(() => {
+        /* Get parameters from JSON */
+        const initial_ITI = jatos.componentJsonInput['initial_ITI']
+        const image_duration = jatos.componentJsonInput['image_duration']
+        const ITI_1_start = jatos.componentJsonInput['ITI_1'][0]
+        const ITI_1_range = jatos.componentJsonInput['ITI_1'][1] - jatos.componentJsonInput['ITI_1'][0]
+        const outcome_duration = jatos.componentJsonInput['outcome_duration']
+        const ITI_2_start = jatos.componentJsonInput['ITI_2'][0]
+        const ITI_2_range = jatos.componentJsonInput['ITI_2'][1] - jatos.componentJsonInput['ITI_2'][0]
+        const probability = jatos.componentJsonInput['probability']
+        const num_blocks = jatos.componentJsonInput['num_blocks']
+        const trials_per_block = jatos.componentJsonInput['trials_per_block']
+        const block_order = jatos.componentJsonInput['block_order']
+        if (block_order.length != num_blocks) {
+            throw new Error("Number of blocks doesn't match block order array!");
+        }
+        const image_directory = jatos.componentJsonInput['image_directory']
+
+        /* create timeline */
+        var timeline = [];
+
+        const user_image_ratings = jatos.studySessionData['user_stimuli']
+        console.log(user_image_ratings)
+        const trial_images = Object.values(user_image_ratings)
+
+        /* Assemble the instruction plugin */
+        var instructions = {
+            type: jsPsychInstructions,
+            pages: jatos.componentJsonInput.instructions.map(parseInstructions),
+            show_clickable_nav: true,
+            show_page_number: true,
+        }
+        timeline.push(instructions)
+
+        var fixation1 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size:60px;">+</div>',
+            choices: "NO_KEYS",
+            trial_duration: initial_ITI,
+        };
+        timeline.push(fixation1)
+
+        /* Assemble the timeline variables with stimuli and the outcome for Practice Trial */
+        /* Each trial image 4 times with probabilistic outcome based on aligned/unaligned */
+        trial_stimuli = generate_stimuli(trial_images, outcome_images, num_blocks, trials_per_block, probability, 
+        [ITI_1_start, ITI_1_range, ITI_2_start, ITI_2_range], block_order, image_directory)
+
+        /* define test procedure */
+        var trial_image = {
+            type: jsPsychImageKeyboardResponse,
+            choices: "NO_KEYS",
+            stimulus: jsPsych.timelineVariable('image'),
+            stimulus_height: window.innerHeight * 0.4,
+            trial_duration: image_duration
+        };
+
+        var trial_choice = {
+            type: jsPsychHtmlKeyboardResponse,
+            choices: ['ArrowLeft', 'ArrowRight'],
+            stimulus: '<p style="font-size: 36px">Which outcome do you expect?</p><p style="font-size: 128px"><span style="color:red">-&nbsp&nbsp&nbsp&nbsp</span><span style="color:green">+</span></p>',
+            // stimulus_height: window.innerHeight * 0.35,
+            data: {
+                filter_data: true,
+                jitter_1: jsPsych.timelineVariable('jitter_1'),
+                jitter_2: jsPsych.timelineVariable('jitter_2'),
+                image: jsPsych.timelineVariable('image_name'),
+                image_rating: jsPsych.timelineVariable('image_rating'),
+                outcome: jsPsych.timelineVariable('outcome'),
+                trial_block: jsPsych.timelineVariable('trial_type'),
+                probabilistic_event: jsPsych.timelineVariable('probabilistic_event')
+            },
+            save_trial_parameters: {
+                stimulus: false,
+                trial_type: false,
+                time_elapsed: false,
+            },
+            on_finish: function(data) {
+                if (data.response == 'arrowleft') {
+                    data.response = 0
+                }
+                else {
+                    data.response = 1
+                }
+                data.correct = (data.response == data.outcome)
+                if (data.probabilistic_event) {
+                    data.correct_theoretical = !data.correct
+                }
+                else {
+                    data.correct_theoretical = data.correct
+                }
+            }
+        }
+
+        var fixation2 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size:60px;">●</div>',
+            choices: "NO_KEYS",
+            trial_duration: jsPsych.timelineVariable('jitter_1'),
+        };
+
+        var trial_outcome = {
+            type: jsPsychHtmlKeyboardResponse,
+            choices: "NO_KEYS",
+            stimulus: jsPsych.timelineVariable('outcome_image'),
+            trial_duration: outcome_duration,
+        };
+
+        var fixation3 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size:60px;">●</div>',
+            choices: "NO_KEYS",
+            trial_duration: jsPsych.timelineVariable('jitter_2'),
+        };
+
+        /* define test procedure */
+        var trial = {
+            timeline: [trial_image, trial_choice, fixation2, trial_outcome, fixation3],
+            timeline_variables: trial_stimuli,
+            randomize_order: false,
+        };
+        timeline.push(trial);
+
+        jsPsych.run(timeline);
+    });
+
+  </script>
+</html>

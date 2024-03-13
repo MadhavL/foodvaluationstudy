@@ -1,0 +1,55 @@
+[HIT Configuration]
+title = WMDM Experiment
+description = Dual task
+keywords = decision making, psychology, experiment
+lifetime = 24
+us_only = false
+approve_requirement = 80
+number_hits_approved = 100
+require_master_workers = false
+require_quals = 
+block_quals = 
+advanced_quals_path = 
+ad_url = 
+psiturk_keywords = experiments
+organization_name = Yale University
+browser_exclude_rule = MSIE, mobile, tablet
+allow_repeats = false
+email_on_error = nachshon.korem@yale.edu
+
+[Database Parameters]
+database_url = postgres://pwxnoprctkqgzc:17c3f1cc32e3b7db5541b03e8e7d7daced588ca6ac5abf4fca55118de971b9a1@ec2-54-160-96-70.compute-1.amazonaws.com:5432/d63n91fg4326vb
+table_name = experiment_table
+
+[Server Parameters]
+host = 0.0.0.0
+port = 22362
+logfile = server.log
+loglevel = 2
+enable_dashboard = true
+login_username = nachshon
+login_pw = correcthorsebatterystaple
+threads = 1
+secret_key = SUPER_SECRET_KEY_ON_SECURE
+certfile = 
+keyfile = 
+server_timeout = 30
+
+[Task Parameters]
+experiment_code_version = 1.0
+num_conds = 1
+num_counters = 1
+contact_email_on_error = 
+browser_exclude_rule = MSIE, mobile, tablet
+allow_repeats = false
+cutoff_time = 300
+
+[Shell Parameters]
+launch_in_mode = sandbox
+persistent_history_file = .psiturk_history
+bonus_message = "Thanks for participating!"
+ad_url = https://wmdm-corsiblock.herokuapp.com/pub
+
+[Heroku Parameters]
+app_name = wmdm-corsiblock
+

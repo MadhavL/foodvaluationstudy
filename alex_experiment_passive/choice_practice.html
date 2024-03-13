@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My experiment</title>
+    <script src="jatos.js"></script>
+    <script src="static/js/jspsych/jspsych.js"></script>
+    <script src="static/js/jspsych/plugin-instructions.js"></script>
+    <script src="static/js/jspsych/plugin-preload.js"></script>
+    <script src="static/js/jspsych/plugin-image-keyboard-response.js"></script>
+    <script src="static/js/jspsych/plugin-html-keyboard-response.js"></script>
+    <link
+      href="static/js/jspsych/jspsych.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <style>
+        .stimuli-image {
+            width: 50vh;
+          max-width: 1000px;
+          margin-left: 2.5vw;
+          margin-right: 2.5vw;
+        }
+      </style>
+  </head>
+  <body></body>
+  <script>
+    /* initialize jsPsych */
+    var jsPsych = initJsPsych({
+        on_trial_start: () => {
+            jatos.addAbortButton({style: "color:white; text-shadow:none"})
+      },
+      on_finish: () => {
+        jatos.startNextComponent()
+      }
+    });
+
+    /* Take instructions from component JSON input and construct pages for instruction plugin */
+    function parseInstructions({ title, body, next }) {
+        const result = [];
+        if (title) result.push(`<h2>${title}</h2>`)
+        if (body) result.push(body.map((text) => `<p>${text}</p>`).join('\n'));
+        if (next) result.push(`<small style="opacity: 0.5;">${next}</small>`);
+        return result.join('\n');
+      }
+    
+    const practice_trial_images = ['static/images/shapes/triangle.png', 'static/images/shapes/square.png']
+    const outcome_images = ['<p style="font-size:200px;color:red">-5</p>', '<p style="font-size:200px;color:red">-2</p>', '<p style="font-size:200px;color:green">+2</p>', '<p style="font-size:200px;color:green">+5</p>'] //Same order as the image ratings
+
+    /* start the experiment */
+    jatos.onLoad(() => {
+        /* Get parameters from JSON */
+        const initial_ITI = jatos.componentJsonInput['initial_ITI']
+        const image_duration = jatos.componentJsonInput['image_duration']
+        const ITI_1_start = jatos.componentJsonInput['ITI_1'][0]
+        const ITI_1_range = jatos.componentJsonInput['ITI_1'][1] - jatos.componentJsonInput['ITI_1'][0]
+        const outcome_duration = jatos.componentJsonInput['outcome_duration']
+        const ITI_2_start = jatos.componentJsonInput['ITI_2'][0]
+        const ITI_2_range = jatos.componentJsonInput['ITI_2'][1] - jatos.componentJsonInput['ITI_2'][0]
+        const probability = jatos.componentJsonInput['probability']
+        const num_blocks = jatos.componentJsonInput['num_blocks']
+        const trials_per_block = jatos.componentJsonInput['trials_per_block']
+
+        /* create timeline */
+        var timeline = [];
+
+        /* Assemble the instruction plugin */
+        var instructions = {
+            type: jsPsychInstructions,
+            pages: jatos.componentJsonInput.instructions.map(parseInstructions),
+            show_clickable_nav: true,
+            show_page_number: true,
+        };
+        timeline.push(instructions)
+
+        var fixation1 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size:60px;">+</div>',
+            choices: "NO_KEYS",
+            trial_duration: initial_ITI,
+        };
+        timeline.push(fixation1)
+
+        /* Assemble the timeline variables with stimuli and the outcome for Practice Trial */
+        /* Each practice trial image 3 times with randomized outcome */
+        var practice_trial_stimuli = [];
+        for (let i = 0; i < trials_per_block; i++) {
+            practice_trial_stimuli.push(
+                {html: `<img src="${practice_trial_images[0]}" class="stimuli-image"/><img src="${practice_trial_images[1]}" class="stimuli-image"/>`,
+                    outcome_image: outcome_images[Math.floor(Math.random() * outcome_images.length)],
+                    jitter_2: (Math.random() * ITI_2_range) + ITI_2_start,
+                })
+        }
+        for (let i = 0; i < trials_per_block; i++) {
+            practice_trial_stimuli.push(
+                {html: `<img src="${practice_trial_images[1]}" class="stimuli-image""/><img src="${practice_trial_images[0]}" class="stimuli-image"/>`,
+                    outcome_image: outcome_images[Math.floor(Math.random() * outcome_images.length)],
+                    jitter_2: (Math.random() * ITI_2_range) + ITI_2_start,
+                })
+        }
+        
+
+        /* define test procedure */
+        var practice_trial_image = {
+            type: jsPsychHtmlKeyboardResponse,
+            choices: ['ArrowLeft', 'ArrowRight'],
+            stimulus: jsPsych.timelineVariable('html'),
+            stimulus_height: window.innerHeight * 0.5,
+            trial_duration: image_duration,
+            data: {
+                collect_data: true,
+            },
+            save_trial_parameters: {
+                // don't save the stimulus
+                trial_type: false,
+                time_elapsed: false,
+            },
+            on_finish: function(data) {
+                let rand_time = (Math.random() * ITI_1_range) + ITI_1_start
+                if (data.rt == null) {
+                    jatos.studySessionData['prev_success'] = false
+                    jatos.studySessionData['jitter_1'] = rand_time
+                }
+                else {
+                    jatos.studySessionData['prev_success'] = true
+                    jatos.studySessionData['jitter_1'] = (image_duration - data.rt)/2 + rand_time
+                }
+            }
+        };
+
+        /* define fixation and test trials */
+        var fixation = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size:60px;">●</div>',
+            choices: "NO_KEYS",
+            trial_duration: function() {
+                return jatos.studySessionData['jitter_1']
+            },
+        };
+
+        var practice_trial_outcome = {
+            type: jsPsychHtmlKeyboardResponse,
+            choices: "NO_KEYS",
+            stimulus: jsPsych.timelineVariable('outcome_image'),
+            stimulus_height: window.innerHeight * 0.35,
+            trial_duration: outcome_duration,
+            on_start: function(trial) {
+                if (!jatos.studySessionData['prev_success']) {
+                    trial.stimulus = '<p style="font-size:160px;color:white">Too slow!</p>'
+                }
+            }
+        }
+
+        var fixation2 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size:60px;">●</div>',
+            choices: "NO_KEYS",
+            trial_duration: jsPsych.timelineVariable('jitter_2'),
+        };
+        
+        /* define test procedure */
+        var test_procedure = {
+            timeline: [practice_trial_image, fixation, practice_trial_outcome, fixation2],
+            timeline_variables: practice_trial_stimuli,
+            randomize_order: true
+        };
+        timeline.push(test_procedure);
+
+        jsPsych.run(timeline);
+    });
+
+  </script>
+</html>

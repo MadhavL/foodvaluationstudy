@@ -1,0 +1,6 @@
+__pycache__/
+.psiturk_history
+.DS_Store
+*.code-workspace
+server.log
+participants.db
