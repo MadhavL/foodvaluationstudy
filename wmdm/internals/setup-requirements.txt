@@ -1,3 +1,0 @@
-PsiTurk==3.0.6
-configparser
-heroku3
