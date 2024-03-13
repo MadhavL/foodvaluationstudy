@@ -1,0 +1,20 @@
+<!-- This Jinja template centralizes all experiment messages one might want to change. -->
+
+<!--
+0. Experiment title
+Title of the experiment to be displayed as the tab's title.
+Used in: all files
+-->
+{% macro title() %}
+Levy Lab Yale Experiment
+{% endmacro %}
+
+
+<!--
+Experiment contact
+Link to lab email.
+Used in: error.html
+-->
+{% macro contact() %}
+<a href="mailto:decision@yale.edu">decision@yale.edu</a>
+{% endmacro %}

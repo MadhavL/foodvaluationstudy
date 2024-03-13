@@ -1,0 +1,2 @@
+PsiTurk @ git+https://github.com/evankirkiles/psiTurk.git@28d0a10c34950d7592a748ee46df6cebcdb9366e
+psycopg2-binary
