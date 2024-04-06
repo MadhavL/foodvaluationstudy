@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My experiment</title>
+    <script src="jatos.js"></script>
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-image-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.4"></script>
+    <link
+      href="static/css/jspsych.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+  </head>
+  <body></body>
+  <script>
+    /* initialize jsPsych */
+    var jsPsych = initJsPsych({
+        //Add abort button
+        on_trial_start: function() {
+            jatos.addAbortButton(
+                {
+                    action: function() {
+                        // Abort the study and redirect to abort link
+                        jatos.endStudyAndRedirect(jatos.endStudyAndRedirect(jatos.studySessionData['abort_url']));
+                    }
+            }
+            );
+        },
+        //Go to next component on finish
+      on_finish: () => {
+        results = jsPsych.data.get();
+        jatos.startComponentByTitle("Stimuli Rating (POST)", results);
+      }
+    });
+
+    //Given a base directory for images & an image path, return the image name
+    // function image_name_from_path(image_path, base_directory) {
+    //     return image_path.substring(base_directory.length, image_path.lastIndexOf('.'))
+    // }
+
+    //TO DO:
+    //1. TOO SLOW IF CHOICE NOT MADE IN TIME
+    //2. CHANGE STIMULUS BASED ON ALIGNMENT
+    //3. COLLECT DATA
+    //4. Attention checks
+    //5. Stoppping criteria
+
+    /**
+     * Generate trial stimuli (timeline variable) for the passive learning task
+     * @param {Array} images - List of image paths
+     * @param {String} image_directory - Base directory for images
+     * @param {Number} trials_per_block - Number of trials per block
+     * @param {Number} probability - Probability of aligned outcome (if aligned, probability of positive outcome for positive images, if unaligned, probability of positive outcome for negative images)
+     * @returns {Array} - List of trial stimuli timeline variable, each entry has the data for each run of the trial
+     */
+    function generate_trial_stimuli(images, image_directory, trials_per_block, probability) {
+        //Timeline variable
+        //image: image path for stimulus image
+        //outcome: image html for outcome image corresponding to the image
+        var trial_stimuli = [];
+        //Create an array of size (trials_per_block) * 4, filled with 0, 1, 2, 3 to represent the rating of the image
+        let baseline = Array(trials_per_block).fill([0, 1, 2, 3]).flat();
+        //Shuffle the array without repetition
+        const indices = jsPsych.randomization.shuffleNoRepeats(baseline);
+        //Define possible outcome images (html). 0 is negative, 1 is positive
+        const outcome_images = ['<p style="font-size:200px;color:red">—</p>', '<p style="font-size:200px;color:green">+</p>'] //Negative is idx 0, +ve is idx 1
+        //Go through each index (which is a number for image rating)
+        for (const idx of indices) {
+            const rand_outcome = Math.random();
+            let x = idx <= 1 ? 0 : 1; //If the image is rated 0 or 1 (strongly dislike or dislike), x is the index for the negative outcome, else if image is rated 2 or 3 (like or strongly like), x is the index for the positive outcome 
+            let y = idx <= 1 ? 1 : 0; //If the image is rated 0 or 1 (strongly dislike or dislike), y is the index for the positive outcome, else if image is rated 2 or 3 (like or strongly like), y is the index for the negative outcome
+            trial_stimuli.push({
+                image: images[idx], //Get the correct image path from the list of image paths
+                outcome: outcome_images[(rand_outcome < probability ? x : y)] //Get the outcome image based on the random probability: if less than 'probability', get the positive outcome for positive images and negative outcome for negative images. If greater than 'probability', get the negative outcome for positive images and positive outcome for negative images
+            })
+        }
+        return trial_stimuli;   
+    }
+        
+    /* start the experiment */
+    jatos.onLoad(() => {
+        /* Get parameters from JSON */
+        const image_directory = jatos.componentJsonInput['image_directory'];
+        const trials_per_block = jatos.componentJsonInput['trials_per_block'];
+        const probability = jatos.componentJsonInput['probability'];
+        const block_order = jatos.componentJsonInput['block_order'][Math.floor(Math.random() * jatos.componentJsonInput['block_order'].length)];
+        const image_duration = jatos.componentJsonInput['image_duration'];
+        const choice_duration = jatos.componentJsonInput['choice_duration'];
+        const outcome_duration = jatos.componentJsonInput['outcome_duration'];
+        const initial_ITI = jatos.componentJsonInput['initial_ITI'];
+        console.log(block_order);
+        
+        /* create timeline */
+        var timeline = [];
+
+        /* get the paths of the sampled images the user rated for each category*/
+        const user_image_ratings = jatos.studySessionData['user_stimuli'] //Map from rating to image path
+        console.log(user_image_ratings)
+        const trial_images = Object.values(user_image_ratings) //List of image paths
+
+        /* define initial fixation jitter image (duration is defined in component input as initial_ITI) */
+        var fixation1 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size:60px;">+</div>',
+            choices: "NO_KEYS",
+            trial_duration: initial_ITI,
+        };
+        //Add initial ITI to the timeline
+        timeline.push(fixation1)
+
+        //Generate trial stimuli timeline variable
+        trial_stimuli = generate_trial_stimuli(trial_images, image_directory, trials_per_block, probability);
+
+        /* Create a trial that shows the rated image and waits for the specified duration (image_duration) without any input from user */
+        var trial_image = {
+            type: jsPsychImageKeyboardResponse,
+            choices: "NO_KEYS",
+            stimulus: jsPsych.timelineVariable('image'),
+            stimulus_height: window.innerHeight * 0.4,
+            trial_duration: image_duration
+        };
+
+        /* Create a trial that asks the user to predict the outcome of the image (left or right arrow) with a specified duration (choice_duration) */
+        var trial_choice = {
+            type: jsPsychHtmlKeyboardResponse,
+            choices: ['ArrowLeft', 'ArrowRight'],
+            stimulus: '<p style="font-size: 36px">Which outcome do you expect?</p><p style="font-size: 128px"><span style="color:red">-&nbsp&nbsp&nbsp&nbsp</span><span style="color:green">+</span></p>',
+            trial_duration: choice_duration, //How long before the choice times out
+        }
+        
+        /* define fixation 2 jitter image */
+        var fixation2 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size:60px;">●</div>',
+            choices: "NO_KEYS",
+            trial_duration: 500,
+        };
+
+        /* Create a trial that shows the outcome of the image (positive or negative) for specified duration (outcome_duration) without accepting user input */
+        var trial_outcome = {
+            type: jsPsychHtmlKeyboardResponse,
+            choices: "NO_KEYS",
+            stimulus: jsPsych.timelineVariable('outcome'),
+            trial_duration: 1000,
+        };
+
+        /* define fixation 3 jitter image */
+        var fixation3 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size:60px;">●</div>',
+            choices: "NO_KEYS",
+            trial_duration: 500,
+        };
+
+        /* define test procedure: first rated image is shown, then user makes the choice, then fixation, then outcome shown, then another fixation */
+        var trial = {
+            timeline: [trial_image, trial_choice, fixation2, trial_outcome, fixation3],
+            timeline_variables: trial_stimuli,
+            randomize_order: false,
+        };
+        timeline.push(trial);
+        //Add test procedure to the timeline
+
+        jsPsych.run(timeline);
+    });
+
+  </script>
+</html>

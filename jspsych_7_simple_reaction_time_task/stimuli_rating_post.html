@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My experiment</title>
+    <script src="jatos.js"></script>
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-image-slider-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.4"></script>
+    <link
+      href="static/css/jspsych.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+  </head>
+  <body></body>
+  <script>
+    /* initialize jsPsych */
+    var jsPsych = initJsPsych({
+        on_trial_start: function() {
+            jatos.addAbortButton(
+                {
+                    action: function() {
+                        jatos.endStudyAndRedirect(jatos.endStudyAndRedirect(jatos.studySessionData['abort_url']));
+                    }
+            }
+            );
+        },
+      on_finish: () => {
+        results = jsPsych.data.get().filter({trial_type: 'image-slider-response'})
+        remove_properties = ['trial_type', 'trial_index', 'internal_node_id', 'stimulus']
+        jatos.endStudyAndRedirect(jatos.componentJsonInput['end_successful_url'], post_process_data(results['trials'], remove_properties))
+      }
+    });
+
+    function parseInstructions({ title, body, next }) {
+        const result = [];
+        if (title) result.push(`<h2>${title}</h2>`)
+        if (body) result.push(body.map((text) => `<p>${text}</p>`).join('\n'));
+        if (next) result.push(`<small style="opacity: 0.5;">${next}</small>`);
+        return result.join('\n');
+      }
+    
+      //Results should be a list of json objects corresponding to the trial results
+    function post_process_data(results, remove) {
+        for (trial_result of results) {
+            for (property of remove) {
+                delete trial_result[property]
+            }
+        }
+        return results
+    }
+    
+    function image_name_from_path(image_path, base_directory) {
+        return image_path.substring(base_directory.length, image_path.lastIndexOf('.'))
+    }
+
+    /* start the experiment */
+    jatos.onLoad(() => {
+        /* create timeline */
+        var timeline = [];
+
+        const image_ext = jatos.componentJsonInput.extension
+        const directory = jatos.componentJsonInput.base_directory
+        const image_names = jatos.componentJsonInput.image_names
+        
+        image_resources = []
+        for (let image_name of image_names) {
+            image_resources.push(directory + image_name + image_ext)
+        }
+
+        /* preload images */
+        var preload = {
+        type: jsPsychPreload,
+        images: image_resources
+        };
+        timeline.push(preload);
+
+        var instructions = {
+            type: jsPsychInstructions,
+            pages: jatos.componentJsonInput.instructions.map(parseInstructions),
+            show_clickable_nav: true,
+            show_page_number: true
+        }
+        timeline.push(instructions)
+
+        /* define trial stimuli array for timeline variables */
+        var test_stimuli = [];
+        for (let image_str of image_resources) {
+            test_stimuli.push({image: image_str,
+                image_name: image_name_from_path(image_str, directory)})
+        }
+
+        /* define test procedure */
+        var test_procedure = {
+            type: jsPsychImageSliderResponse,
+            min: 1,
+            max: 5,
+            slider_start: function() {
+                return 1 + Math.floor(Math.random() * 5);
+            },
+            labels: ["Strongly Dislike", "Dislike", "Neutral", "Like", "Strongly Like"],
+            timeline: [
+                {stimulus: jsPsych.timelineVariable('image')}, //Use timeline variable to get each image for the trial
+            ],
+            save_trial_parameters: {
+                slider_start: false,
+                time_elapsed: false,
+            },
+            data: {
+                image: jsPsych.timelineVariable('image_name')
+            },
+            timeline_variables: test_stimuli,
+            stimulus_height: window.innerHeight * 0.4,
+            slider_width: window.innerWidth * 0.3,
+            randomize_order: true, //Randomize order of images
+        };
+        timeline.push(test_procedure);
+
+        jsPsych.run(timeline);
+    });
+
+  </script>
+</html>
