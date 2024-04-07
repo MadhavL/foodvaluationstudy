@@ -42,10 +42,9 @@
     // }
 
     //TO DO:
-    //1. CHANGE STIMULUS BASED ON ALIGNMENT
-    //2. COLLECT DATA
-    //3. Attention checks
-    //4. Stoppping criteria
+    //1. COLLECT DATA
+    //2. Attention checks
+    //3. Stoppping criteria
 
     /**
      * Generate trial stimuli (timeline variable) for the passive learning task
@@ -92,13 +91,12 @@
         const image_directory = jatos.componentJsonInput['image_directory'];
         const trials_per_block = jatos.componentJsonInput['trials_per_block'];
         const probability = jatos.componentJsonInput['probability'];
-        const block_order = jatos.componentJsonInput['block_order'][Math.floor(Math.random() * jatos.componentJsonInput['block_order'].length)];
+        const block_order = jatos.componentJsonInput['block_order'];
         const image_duration = jatos.componentJsonInput['image_duration'];
         const choice_duration = jatos.componentJsonInput['choice_duration'];
         const outcome_duration = jatos.componentJsonInput['outcome_duration'];
         const initial_ITI = jatos.componentJsonInput['initial_ITI'];
         const ITI_2 = jatos.componentJsonInput['ITI_2'];
-        console.log(block_order);
         
         /* create timeline */
         var timeline = [];
