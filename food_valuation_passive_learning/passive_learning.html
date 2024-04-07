@@ -52,29 +52,36 @@
      * @param {Array} images - List of image paths
      * @param {String} image_directory - Base directory for images
      * @param {Number} trials_per_block - Number of trials per block
+     * @param {Array} block_order - Order of blocks (0: aligned, 1: unaligned)
      * @param {Number} probability - Probability of aligned outcome (if aligned, probability of positive outcome for positive images, if unaligned, probability of positive outcome for negative images)
      * @returns {Array} - List of trial stimuli timeline variable, each entry has the data for each run of the trial
      */
-    function generate_trial_stimuli(images, image_directory, trials_per_block, probability) {
+    function generate_trial_stimuli(images, image_directory, trials_per_block, block_order, probability) {
         //Timeline variable
         //image: image path for stimulus image
         //outcome: image html for outcome image corresponding to the image
         var trial_stimuli = [];
-        //Create an array of size (trials_per_block) * 4, filled with 0, 1, 2, 3 to represent the rating of the image
-        let baseline = Array(trials_per_block).fill([0, 1, 2, 3]).flat();
-        //Shuffle the array without repetition
-        const indices = jsPsych.randomization.shuffleNoRepeats(baseline);
         //Define possible outcome images (html). 0 is negative, 1 is positive
         const outcome_images = ['<p style="font-size:200px;color:red">—</p>', '<p style="font-size:200px;color:green">+</p>'] //Negative is idx 0, +ve is idx 1
-        //Go through each index (which is a number for image rating)
-        for (const idx of indices) {
-            const rand_outcome = Math.random();
-            let x = idx <= 1 ? 0 : 1; //If the image is rated 0 or 1 (strongly dislike or dislike), x is the index for the negative outcome, else if image is rated 2 or 3 (like or strongly like), x is the index for the positive outcome 
-            let y = idx <= 1 ? 1 : 0; //If the image is rated 0 or 1 (strongly dislike or dislike), y is the index for the positive outcome, else if image is rated 2 or 3 (like or strongly like), y is the index for the negative outcome
-            trial_stimuli.push({
-                image: images[idx], //Get the correct image path from the list of image paths
-                outcome: outcome_images[(rand_outcome < probability ? x : y)] //Get the outcome image based on the random probability: if less than 'probability', get the positive outcome for positive images and negative outcome for negative images. If greater than 'probability', get the negative outcome for positive images and positive outcome for negative images
-            })
+        //For each block in the block order,
+        for (block of block_order) {
+            //Create an array of size (trials_per_block) * 4, filled with 0, 1, 2, 3 to represent the rating of the image
+            let baseline = Array(trials_per_block).fill([0, 1, 2, 3]).flat();
+            //Shuffle the array without repetition
+            const indices = jsPsych.randomization.shuffleNoRepeats(baseline);
+            //Go through each index (which is a number for image rating)
+            for (const idx of indices) {
+                const rand_outcome = Math.random();
+
+                //If the block is aligned (0), then with probability 'probability', x should be 0 (negative) if idx <= 1 (strongly dislike or dislike) or 1 (positive) if idx > 1 (like or strongly like). With probability 1 - 'probability', x should be 1 if idx <= 1 or 0 if idx > 1
+                //If the block is unaligned (1), then with probability 'probability', x should be 1 if idx <= 1 or 0 if idx > 1. With probability 1 - 'probability', x should be 0 if idx <= 1 or 1 if idx > 1
+                let x = block == 0 ? (rand_outcome < probability ? (idx <= 1 ? 0 : 1) : (idx <= 1 ? 1 : 0)) : (rand_outcome < probability ? (idx <= 1 ? 1 : 0) : (idx <= 1 ? 0 : 1));
+
+                trial_stimuli.push({
+                    image: images[idx], //Get the correct image path from the list of image paths
+                    outcome: outcome_images[x] //Get the outcome image based on the probability rules
+                })
+            }
         }
         return trial_stimuli;   
     }
@@ -98,7 +105,6 @@
 
         /* get the paths of the sampled images the user rated for each category*/
         const user_image_ratings = jatos.studySessionData['user_stimuli'] //Map from rating to image path
-        console.log(user_image_ratings)
         const trial_images = Object.values(user_image_ratings) //List of image paths
 
         /* define initial fixation jitter image (duration is defined in component input as initial_ITI) */
@@ -112,7 +118,7 @@
         timeline.push(fixation1)
 
         //Generate trial stimuli timeline variable
-        trial_stimuli = generate_trial_stimuli(trial_images, image_directory, trials_per_block, probability);
+        trial_stimuli = generate_trial_stimuli(trial_images, image_directory, trials_per_block, block_order, probability);
 
         /* Create a trial that shows the rated image and waits for the specified duration (image_duration) without any input from user */
         var trial_image = {
