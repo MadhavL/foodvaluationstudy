@@ -90,6 +90,7 @@
         const choice_duration = jatos.componentJsonInput['choice_duration'];
         const outcome_duration = jatos.componentJsonInput['outcome_duration'];
         const initial_ITI = jatos.componentJsonInput['initial_ITI'];
+        const ITI_2 = jatos.componentJsonInput['ITI_2'];
         console.log(block_order);
         
         /* create timeline */
@@ -146,9 +147,9 @@
             type: jsPsychHtmlKeyboardResponse,
             stimulus: '<div style="font-size:60px;">●</div>',
             choices: "NO_KEYS",
-            //For the duration, 500-1000ms random + leftover time from choice duration / 2 = 500-1000 + (choice_duration - RT) / 2
+            //For the duration, 500-1000ms random + leftover time from choice duration / 2 = ITI_2[0]-ITI_2[1] + (choice_duration - RT) / 2
             trial_duration: function() {
-                return Math.floor(Math.random() * 500) + 500 + (choice_duration - (jsPsych.data.get().last(1).values()[0].rt != null ?  jsPsych.data.get().last(1).values()[0].rt : choice_duration)) / 2;
+                return Math.floor(Math.random() * (ITI_2[1] - ITI_2[0])) + ITI_2[0] + (choice_duration - (jsPsych.data.get().last(1).values()[0].rt != null ?  jsPsych.data.get().last(1).values()[0].rt : choice_duration)) / 2;
             },
         };
 
