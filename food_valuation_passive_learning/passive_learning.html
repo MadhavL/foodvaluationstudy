@@ -42,11 +42,10 @@
     // }
 
     //TO DO:
-    //1. TOO SLOW IF CHOICE NOT MADE IN TIME
-    //2. CHANGE STIMULUS BASED ON ALIGNMENT
-    //3. COLLECT DATA
-    //4. Attention checks
-    //5. Stoppping criteria
+    //1. CHANGE STIMULUS BASED ON ALIGNMENT
+    //2. COLLECT DATA
+    //3. Attention checks
+    //4. Stoppping criteria
 
     /**
      * Generate trial stimuli (timeline variable) for the passive learning task
@@ -129,6 +128,17 @@
             choices: ['ArrowLeft', 'ArrowRight'],
             stimulus: '<p style="font-size: 36px">Which outcome do you expect?</p><p style="font-size: 128px"><span style="color:red">-&nbsp&nbsp&nbsp&nbsp</span><span style="color:green">+</span></p>',
             trial_duration: choice_duration, //How long before the choice times out
+            on_finish: function(data) {
+                //If the user does not make a choice, set a flag to indicate so"
+                if (data.response == null) {
+                    jatos.studySessionData['tooslow'] = 1;
+                }
+                else {
+                    //If the user makes a choice, set the flag
+                    jatos.studySessionData['tooslow'] = 0;
+                }
+            
+            }
         }
         
         /* define fixation 2 jitter image */
@@ -136,14 +146,25 @@
             type: jsPsychHtmlKeyboardResponse,
             stimulus: '<div style="font-size:60px;">●</div>',
             choices: "NO_KEYS",
-            trial_duration: 500,
+            //For the duration, 500-1000ms random + leftover time from choice duration / 2 = 500-1000 + (choice_duration - RT) / 2
+            trial_duration: function() {
+                return Math.floor(Math.random() * 500) + 500 + (choice_duration - (jsPsych.data.get().last(1).values()[0].rt != null ?  jsPsych.data.get().last(1).values()[0].rt : choice_duration)) / 2;
+            },
         };
 
         /* Create a trial that shows the outcome of the image (positive or negative) for specified duration (outcome_duration) without accepting user input */
         var trial_outcome = {
             type: jsPsychHtmlKeyboardResponse,
             choices: "NO_KEYS",
-            stimulus: jsPsych.timelineVariable('outcome'),
+            stimulus: function() {
+                //If the choice was made too slow, show a message to the user
+                if (jatos.studySessionData['tooslow'] == 1) {
+                    return '<p style="font-size: 36px">Too slow!</p>'
+                }
+                else {
+                    return jsPsych.timelineVariable('outcome')
+                }
+            },
             trial_duration: 1000,
         };
 
