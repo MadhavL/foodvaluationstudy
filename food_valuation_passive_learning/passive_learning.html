@@ -8,6 +8,8 @@
     <script src="https://unpkg.com/@jspsych/plugin-image-keyboard-response@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
+
     <link
       href="static/css/jspsych.css"
       rel="stylesheet"
@@ -16,6 +18,9 @@
   </head>
   <body></body>
   <script>
+    const attention_check_1_block_index = 1; //The block index for the first attention check
+    const attention_check_2_block_index = 2; //The block index for the second attention check
+
     /* initialize jsPsych */
     var jsPsych = initJsPsych({
         //Add abort button
@@ -31,8 +36,9 @@
         },
         //Go to next component on finish
       on_finish: () => {
-        results = jsPsych.data.get().filter({filter_data: true})
-        results.push({image_ratings: jatos.studySessionData['user_stimuli']})
+        results = jsPsych.data.get().filter({filter_data: true});
+        results.push(jsPsych.data.get().filter({trial_type: "survey-text"}));
+        results.push({image_ratings: jatos.studySessionData['user_stimuli']});
         jatos.startComponentByTitle("Stimuli Rating (POST)", results);
       }
     });
@@ -43,9 +49,10 @@
     // }
 
     //TO DO:
-    //1. Attention checks
+    //1. Attention check - add time limit
     //2. Stoppping criteria
     //3. Practice trial & timing for practice
+    //4. Debrief section
 
     /**
      * Generate trial stimuli (timeline variable) for the passive learning task
@@ -110,6 +117,13 @@
         const initial_ITI = jatos.componentJsonInput['initial_ITI'];
         const ITI_1 = jatos.componentJsonInput['ITI_1'];
         const ITI_2 = jatos.componentJsonInput['ITI_2'];
+
+        //Random number between 0 to 4*trials_per_block
+        const attention_check_1_trial_index = Math.floor(Math.random() * (4 * trials_per_block));
+        const attention_check_2_trial_index = Math.floor(Math.random() * (4 * trials_per_block));
+
+        console.log(attention_check_1_trial_index);
+        console.log(attention_check_2_trial_index);
         
         /* create timeline */
         var timeline = [];
@@ -264,9 +278,49 @@
             },
         };
 
+        /* Add an attention check (conditional timeline) */
+        var attention_check_1 = {
+            timeline: [
+                {
+                    type: jsPsychSurveyText,
+                    questions: [
+                        {prompt: 'Please write your birth month as the answer to this question. You have 30 seconds to do so before the task continues. Press ‘Enter’ when you are finished.'}
+                    ],
+                    trial_duration: 7000,
+                }
+            ],
+            conditional_function: function() {
+                return jsPsych.data.get().last(1).values()[0].trial_index == (1 + (20 * trials_per_block * (attention_check_1_block_index - 1)) + (5 * attention_check_1_trial_index));
+            },
+            save_trial_parameters: {
+                rt: false,
+                time_elapsed: false,
+            },
+        }
+
+        var attention_check_2 = {
+            timeline: [
+                {
+                    type: jsPsychSurveyText,
+                    questions: [
+                        {prompt: 'Please write your favorite color as the answer to this question. You have 30 seconds to do so before the task continues. Press ‘Enter’ when you are finished.'}
+                    ],
+                    trial_duration: 7000,
+                }
+            ],
+            conditional_function: function() {
+                console.log(jsPsych.data.get().last(1).values()[0].trial_index);
+                return jsPsych.data.get().last(1).values()[0].trial_index == (2 + (20 * trials_per_block * (attention_check_2_block_index - 1)) + (5 * attention_check_2_trial_index));
+            },
+            save_trial_parameters: {
+                rt: false,
+                time_elapsed: false,
+            },
+        }
+
         /* define test procedure: first rated image is shown, then user makes the choice, then fixation, then outcome shown, then another fixation */
         var trial = {
-            timeline: [trial_image, trial_choice, fixation2, trial_outcome, fixation3],
+            timeline: [attention_check_1, attention_check_2, trial_image, trial_choice, fixation2, trial_outcome, fixation3],
             timeline_variables: trial_stimuli,
             randomize_order: false,
         };
