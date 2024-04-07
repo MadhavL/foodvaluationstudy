@@ -31,7 +31,8 @@
         },
         //Go to next component on finish
       on_finish: () => {
-        results = jsPsych.data.get();
+        results = jsPsych.data.get().filter({filter_data: true})
+        results.push({image_ratings: jatos.studySessionData['user_stimuli']})
         jatos.startComponentByTitle("Stimuli Rating (POST)", results);
       }
     });
@@ -59,6 +60,7 @@
         //Timeline variable
         //image: image path for stimulus image
         //outcome: image html for outcome image corresponding to the image
+        //block: 0 for aligned, 1 for unaligned
         var trial_stimuli = [];
         //Define possible outcome images (html). 0 is negative, 1 is positive
         const outcome_images = ['<p style="font-size:200px;color:red">—</p>', '<p style="font-size:200px;color:green">+</p>'] //Negative is idx 0, +ve is idx 1
@@ -78,7 +80,8 @@
 
                 trial_stimuli.push({
                     image: images[idx], //Get the correct image path from the list of image paths
-                    outcome: outcome_images[x] //Get the outcome image based on the probability rules
+                    outcome: outcome_images[x], //Get the outcome image based on the probability rules
+                    block: block
                 })
             }
         }
@@ -96,6 +99,7 @@
         const choice_duration = jatos.componentJsonInput['choice_duration'];
         const outcome_duration = jatos.componentJsonInput['outcome_duration'];
         const initial_ITI = jatos.componentJsonInput['initial_ITI'];
+        const ITI_1 = jatos.componentJsonInput['ITI_1'];
         const ITI_2 = jatos.componentJsonInput['ITI_2'];
         
         /* create timeline */
@@ -124,7 +128,23 @@
             choices: "NO_KEYS",
             stimulus: jsPsych.timelineVariable('image'),
             stimulus_height: window.innerHeight * 0.4,
-            trial_duration: image_duration
+            trial_duration: image_duration,
+            data: {
+                filter_data: true,
+                // image_rating: function() {
+                //     return trial_images.indexOf(jsPsych.timelineVariable('image'));
+                // },
+                block: jsPsych.timelineVariable('block')
+            },
+            save_trial_parameters: {
+                rt: false,
+                response: false,
+                trial_type: false,
+                time_elapsed: false,
+            },
+            on_finish: function(data) {
+                data.image = data.stimulus;
+            }
         };
 
         /* Create a trial that asks the user to predict the outcome of the image (left or right arrow) with a specified duration (choice_duration) */
@@ -133,6 +153,7 @@
             choices: ['ArrowLeft', 'ArrowRight'],
             stimulus: '<p style="font-size: 36px">Which outcome do you expect?</p><p style="font-size: 128px"><span style="color:red">-&nbsp&nbsp&nbsp&nbsp</span><span style="color:green">+</span></p>',
             trial_duration: choice_duration, //How long before the choice times out
+            data: {filter_data: true},
             on_finish: function(data) {
                 //If the user does not make a choice, set a flag to indicate so"
                 if (data.response == null) {
@@ -143,7 +164,12 @@
                     jatos.studySessionData['tooslow'] = 0;
                 }
             
-            }
+            },
+            save_trial_parameters: {
+                stimulus: false,
+                trial_type: false,
+                time_elapsed: false,
+            },
         }
         
         /* define fixation 2 jitter image */
@@ -151,9 +177,23 @@
             type: jsPsychHtmlKeyboardResponse,
             stimulus: '<div style="font-size:60px;">●</div>',
             choices: "NO_KEYS",
-            //For the duration, 500-1000ms random + leftover time from choice duration / 2 = ITI_2[0]-ITI_2[1] + (choice_duration - RT) / 2
+            //For the duration, 500-1000ms random + leftover time from choice duration / 2 = ITI_1[0]-ITI_1[1] + (choice_duration - RT) / 2
             trial_duration: function() {
-                return Math.floor(Math.random() * (ITI_2[1] - ITI_2[0])) + ITI_2[0] + (choice_duration - (jsPsych.data.get().last(1).values()[0].rt != null ?  jsPsych.data.get().last(1).values()[0].rt : choice_duration)) / 2;
+                jatos.studySessionData['ITI_1'] = Math.floor(Math.random() * (ITI_1[1] - ITI_1[0])) + ITI_1[0] + (choice_duration - (jsPsych.data.get().last(1).values()[0].rt != null ?  jsPsych.data.get().last(1).values()[0].rt : choice_duration)) / 2;
+                return jatos.studySessionData['ITI_1'];
+            },
+            data: {
+                filter_data: true,
+                ITI_1: function() {
+                    return jatos.studySessionData['ITI_1'];
+                }
+            },
+            save_trial_parameters: {
+                rt: false,
+                stimulus: false,
+                response: false,
+                trial_type: false,
+                time_elapsed: false,
             },
         };
 
@@ -170,7 +210,16 @@
                     return jsPsych.timelineVariable('outcome')
                 }
             },
-            trial_duration: 1000,
+            trial_duration: outcome_duration,
+            data: {
+                filter_data: true
+            },
+            save_trial_parameters: {
+                rt: false,
+                response: false,
+                trial_type: false,
+                time_elapsed: false,
+            },
         };
 
         /* define fixation 3 jitter image */
@@ -178,7 +227,23 @@
             type: jsPsychHtmlKeyboardResponse,
             stimulus: '<div style="font-size:60px;">●</div>',
             choices: "NO_KEYS",
-            trial_duration: 500,
+            trial_duration: function() {
+                jatos.studySessionData['ITI_2'] = Math.floor(Math.random() * (ITI_2[1] - ITI_2[0])) + ITI_2[0];
+                return jatos.studySessionData['ITI_2'];
+            },
+            data: {
+                filter_data: true,
+                ITI_2: function() {
+                    return jatos.studySessionData['ITI_2'];
+                }
+            },
+            save_trial_parameters: {
+                rt: false,
+                stimulus: false,
+                response: false,
+                trial_type: false,
+                time_elapsed: false,
+            },
         };
 
         /* define test procedure: first rated image is shown, then user makes the choice, then fixation, then outcome shown, then another fixation */
