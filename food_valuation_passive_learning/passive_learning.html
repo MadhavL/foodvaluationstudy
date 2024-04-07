@@ -49,10 +49,9 @@
     // }
 
     //TO DO:
-    //1. Attention check - add time limit
-    //2. Stoppping criteria
-    //3. Practice trial & timing for practice
-    //4. Debrief section
+    //1. Stoppping criteria
+    //2. Practice trial & timing for practice
+    //3. Debrief section
 
     /**
      * Generate trial stimuli (timeline variable) for the passive learning task
@@ -282,11 +281,27 @@
         var attention_check_1 = {
             timeline: [
                 {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: '<div style="font-size:60px;">●</div>',
+                    choices: "NO_KEYS",
+                    trial_duration: function() {
+                        return Math.floor(Math.random() * 1000) + 1000;
+                    }
+                },
+                {
                     type: jsPsychSurveyText,
                     questions: [
                         {prompt: 'Please write your birth month as the answer to this question. You have 30 seconds to do so before the task continues. Press ‘Enter’ when you are finished.'}
                     ],
                     trial_duration: 30000,
+                },
+                {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: '<div style="font-size:60px;">●</div>',
+                    choices: "NO_KEYS",
+                    trial_duration: function() {
+                        return Math.floor(Math.random() * 1000) + 1000;
+                    }
                 }
             ],
             conditional_function: function() {
@@ -301,11 +316,27 @@
         var attention_check_2 = {
             timeline: [
                 {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: '<div style="font-size:60px;">●</div>',
+                    choices: "NO_KEYS",
+                    trial_duration: function() {
+                        return Math.floor(Math.random() * 1000) + 1000;
+                    }
+                },
+                {
                     type: jsPsychSurveyText,
                     questions: [
                         {prompt: 'Please write your favorite color as the answer to this question. You have 30 seconds to do so before the task continues. Press ‘Enter’ when you are finished.'}
                     ],
                     trial_duration: 30000,
+                },
+                {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: '<div style="font-size:60px;">●</div>',
+                    choices: "NO_KEYS",
+                    trial_duration: function() {
+                        return Math.floor(Math.random() * 1000) + 1000;
+                    }
                 }
             ],
             conditional_function: function() {
