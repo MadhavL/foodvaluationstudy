@@ -43,9 +43,9 @@
     // }
 
     //TO DO:
-    //1. COLLECT DATA
-    //2. Attention checks
-    //3. Stoppping criteria
+    //1. Attention checks
+    //2. Stoppping criteria
+    //3. Practice trial & timing for practice
 
     /**
      * Generate trial stimuli (timeline variable) for the passive learning task
@@ -87,6 +87,15 @@
         }
         return trial_stimuli;   
     }
+
+    /* Take instructions from component JSON input and construct pages for instruction plugin */
+    function parseInstructions({ title, body, next }) {
+        const result = [];
+        if (title) result.push(`<h2>${title}</h2>`)
+        if (body) result.push(body.map((text) => `<p>${text}</p>`).join('\n'));
+        if (next) result.push(`<small style="opacity: 0.5;">${next}</small>`);
+        return result.join('\n');
+      }
         
     /* start the experiment */
     jatos.onLoad(() => {
@@ -108,6 +117,15 @@
         /* get the paths of the sampled images the user rated for each category*/
         const user_image_ratings = jatos.studySessionData['user_stimuli'] //Map from rating to image path
         const trial_images = Object.values(user_image_ratings) //List of image paths
+
+         /* Assemble the instruction plugin */
+         var instructions = {
+            type: jsPsychInstructions,
+            pages: jatos.componentJsonInput.instructions.map(parseInstructions),
+            show_clickable_nav: true,
+            show_page_number: true,
+        }
+        timeline.push(instructions)
 
         /* define initial fixation jitter image (duration is defined in component input as initial_ITI) */
         var fixation1 = {
